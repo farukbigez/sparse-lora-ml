@@ -1,7 +1,4 @@
-# 03_lora_train.py
-# LoRA fine‑tuning on the pruned 7B model.
-# Uses rank 64, bf16, batch size 4, 3 epochs.
-
+# 03_lora_train.py (4-bit Quantization + LoRA)
 import os
 os.environ["HF_HUB_OFFLINE"] = "1"
 os.environ["TRANSFORMERS_OFFLINE"] = "1"
@@ -13,6 +10,7 @@ from transformers import (
     TrainingArguments,
     Trainer,
     DataCollatorForLanguageModeling,
+    BitsAndBytesConfig,
 )
 from peft import LoraConfig, get_peft_model, TaskType
 from datasets import load_dataset
@@ -20,28 +18,27 @@ from datasets import load_dataset
 # ===============================================
 # CONFIGURATION
 # ===============================================
-BASE_MODEL_PATH = "models/qwen_pruned_7b"
-LORA_OUTPUT_DIR = "models/lora_on_pruned_7b"
+BASE_MODEL_PATH = "models/qwen_pruned_7b_4bit"
+LORA_OUTPUT_DIR = "models/lora_on_pruned_7b_4bit"
 TRAIN_DATA = "data/train.jsonl"
 TEST_DATA = "data/test.jsonl"
 
-# LoRA hyperparameters (upgraded for 7B)
+# LoRA (daha yüksek rank kullanabiliriz çünkü 4-bit belleği boşaltıyor)
 LORA_R = 64
 LORA_ALPHA = 128
 LORA_DROPOUT = 0.05
-TARGET_MODULES = ["q_proj", "k_proj", "v_proj", "o_proj"]   # All attention layers
+TARGET_MODULES = ["q_proj", "k_proj", "v_proj", "o_proj"]
 
-# Training hyperparameters (GPU‑optimized)
-BATCH_SIZE = 4
-GRAD_ACCUM = 2                # Effective batch = 8
+# Eğitim hiplerparametreleri (VRAM 8GB için optimize)
+BATCH_SIZE = 1          # 4-bit'e rağmen 7B ile 1'den büyük zor
+GRAD_ACCUM = 4          # Efektif batch = 4
 LEARNING_RATE = 3e-4
 EPOCHS = 3
 MAX_SEQ_LENGTH = 512
 
-print(f"⏳ Loading pruned model from {BASE_MODEL_PATH}...")
+print(f"⏳ Loading pruned 4-bit model from {BASE_MODEL_PATH}...")
 model = AutoModelForCausalLM.from_pretrained(
     BASE_MODEL_PATH,
-    torch_dtype=torch.bfloat16,
     device_map="cuda",
 )
 tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL_PATH)
@@ -62,8 +59,7 @@ tokenized = dataset.map(tokenize_function, batched=True, remove_columns=["text"]
 tokenized.set_format("torch", columns=["input_ids", "attention_mask"])
 data_collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False)
 
-print(f"✅ Train: {len(tokenized['train'])} samples")
-print(f"✅ Test:  {len(tokenized['test'])} samples")
+print(f"✅ Train: {len(tokenized['train'])}, Test: {len(tokenized['test'])}")
 
 print("⏳ Applying LoRA...")
 lora_config = LoraConfig(
@@ -75,15 +71,15 @@ lora_config = LoraConfig(
     task_type=TaskType.CAUSAL_LM,
 )
 model = get_peft_model(model, lora_config)
-model.print_trainable_parameters()   # Should show ~15‑20M parameters
+model.print_trainable_parameters()
 
-training_args = TrainingArguments(
+args = TrainingArguments(
     output_dir=LORA_OUTPUT_DIR,
     per_device_train_batch_size=BATCH_SIZE,
     gradient_accumulation_steps=GRAD_ACCUM,
     num_train_epochs=EPOCHS,
     learning_rate=LEARNING_RATE,
-    bf16=True,                     # Use bf16 on Ampere
+    bf16=True,
     logging_steps=50,
     save_steps=500,
     save_total_limit=3,
@@ -92,15 +88,14 @@ training_args = TrainingArguments(
 
 trainer = Trainer(
     model=model,
-    args=training_args,
+    args=args,
     train_dataset=tokenized["train"],
     eval_dataset=tokenized["test"],
     data_collator=data_collator,
 )
 
-print("🚀 Starting training (3 epochs, ~2‑4 hours on a single A100)...")
+print("🚀 Starting training...")
 trainer.train()
-
 model.save_pretrained(LORA_OUTPUT_DIR)
 tokenizer.save_pretrained(LORA_OUTPUT_DIR)
-print(f"✅ LoRA adapter saved to {LORA_OUTPUT_DIR}")
+print("✅ LoRA adapter saved.")

@@ -1,39 +1,43 @@
-# 02_prune_model.py
-# Global unstructured pruning (30%) on Qwen2.5-7B-Instruct.
-# Runs on GPU (CUDA) using bfloat16 for memory efficiency.
-
+# 02_prune_model.py (4-bit Quantization ile Pruning)
 import os
 os.environ["HF_HUB_OFFLINE"] = "1"
 os.environ["TRANSFORMERS_OFFLINE"] = "1"
 
 import torch
 import torch.nn.utils.prune as prune
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 
 # ===============================================
 # CONFIGURATION
 # ===============================================
 MODEL_NAME = "Qwen/Qwen2.5-7B-Instruct"
-PRUNING_RATIO = 0.30   # 30% sparsity
-OUTPUT_DIR = "models/qwen_pruned_7b"
+PRUNING_RATIO = 0.30
+OUTPUT_DIR = "models/qwen_pruned_7b_4bit"
 
-print("⏳ Loading 7B model on GPU (bf16)...")
+print("⏳ Loading 7B model with 4-bit quantization (fits 8GB VRAM)...")
+
+# --- 4-bit Quantization Config ---
+bnb_config = BitsAndBytesConfig(
+    load_in_4bit=True,
+    bnb_4bit_compute_dtype=torch.bfloat16,
+    bnb_4bit_use_double_quant=True,
+)
+
 model = AutoModelForCausalLM.from_pretrained(
     MODEL_NAME,
-    torch_dtype=torch.bfloat16,   # Use bf16 for Ampere GPUs
+    quantization_config=bnb_config,
     device_map="cuda",
 )
 tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
 tokenizer.pad_token = tokenizer.eos_token
-print("✅ Model loaded.")
+print("✅ Model loaded in 4-bit.")
 
-# Collect all Linear layers except lm_head
+print(f"⏳ Applying global pruning (ratio: {PRUNING_RATIO*100}%)...")
 params_to_prune = []
 for name, module in model.named_modules():
     if isinstance(module, torch.nn.Linear) and "lm_head" not in name:
         params_to_prune.append((module, "weight"))
 
-print(f"⏳ Pruning {len(params_to_prune)} layers globally (ratio = {PRUNING_RATIO*100}%)...")
 prune.global_unstructured(
     params_to_prune,
     pruning_method=prune.L1Unstructured,
