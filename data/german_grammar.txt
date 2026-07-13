@@ -1,0 +1,140 @@
+================================================================================
+ALMANCA GRAMER KURALLARI (Türkçe Açıklamalı)
+Bu dosya, RAG (Bilgi Tabanlı Arama) sistemi için hazırlanmıştır.
+Soru sorulduğunda, bu dosyadaki ilgili paragraf bulunup modele verilir.
+================================================================================
+
+1. ALMANCA ARTİKELLER (DER / DIE / DAS)
+----------------------------------------
+Almanca'da her ismin bir cinsiyeti vardır. Bu cinsiyet, ismin başına gelen artikel ile belirtilir.
+
+- DER: Eril (Maskulin) isimler için kullanılır.
+  Örnek: der Mann (adam), der Tisch (masa), der Hund (köpek).
+  İpucu: Günler, aylar, mevsimler ve yönler genellikle erildir (der Montag, der Sommer).
+
+- DIE: Dişil (Feminin) isimler için kullanılır.
+  Örnek: die Frau (kadın), die Blume (çiçek), die Katze (kedi).
+  İpucu: -heit, -keit, -ung, -schaft, -ion ile biten kelimeler genellikle dişildir (die Freiheit, die Zeitung).
+
+- DAS: Nötr (Neutrum) isimler için kullanılır.
+  Örnek: das Kind (çocuk), das Haus (ev), das Buch (kitap).
+  İpucu: -chen, -lein ile biten küçültme ekleri ve fiilden türeyen isimler (das Essen) nötrdür.
+
+- ÇOĞULLAR: Çoğul isimler her zaman DIE artikelini alır (die Kinder, die Häuser).
+
+2. ALMANCA İSİM HALLERİ (FÄLLE / CASES)
+----------------------------------------
+Almanca'da 4 adet isim hali vardır. Artikel ve sıfatlar bu hallere göre değişir.
+
+- NOMİNATİV (Yalın Hal / 1. Hal):
+  Cümlenin öznesidir. "Kim?" veya "Ne?" sorusuna cevap verir.
+  Örnek: **Der Hund** spielt. (Köpek oynuyor.)
+
+- AKKUSATİV (Belirtme Halı / 2. Hal):
+  Cümlenin doğrudan nesnesidir. "Kimi?" veya "Neyi?" sorusuna cevap verir.
+  Artikel değişimi: der -> **den**, die -> die, das -> das, die(çoğul) -> die.
+  Örnek: Ich sehe **den Hund**. (Köpeği görüyorum.)
+
+- DATİV (Yönelme Halı / 3. Hal):
+  Cümlenin dolaylı nesnesidir. "Kime?" sorusuna cevap verir.
+  Artikel değişimi: der -> **dem**, die -> **der**, das -> **dem**, die(çoğul) -> **den** (+n eklenir).
+  Örnek: Ich gebe **dem Hund** einen Knochen. (Köpeğe bir kemik veriyorum.)
+
+- GENİTİV (Tamlayan Halı / 4. Hal):
+  Sahiplik belirtir. "Kimin?" sorusuna cevap verir.
+  Artikel değişimi: der -> **des** (+s), die -> **der**, das -> **des** (+s).
+  Örnek: Das ist das Haus **des Mannes**. (Bu adamın evi.)
+  Not: Günlük konuşmada Genitiv yerine Dativ + "von" kullanımı yaygındır.
+
+3. ALMANCA ZAMANLAR (ZEITEN / TENSES)
+----------------------------------------
+Fiiller, zaman ve kişiye göre çekimlenir.
+
+- PRÄSENS (Geniş / Şimdiki Zaman):
+  Şimdi olan veya genel geçer eylemler.
+  Örnek: Ich **lerne** Deutsch. (Almanca öğreniyorum / öğrenirim.)
+  Düzenli fiil çekimi (örnek: lernen): ich lerne, du lernst, er/sie/es lernt, wir lernen, ihr lernt, sie lernen.
+
+- PERFEKT (Geçmiş Zaman - Di'li):
+  Konuşma dilinde en çok kullanılan geçmiş zaman.
+  Yardımcı fiil (haben/sein) + Partizip II (fiilin 3. hali) ile yapılır.
+  Örnek: Ich **habe** Deutsch **gelernt**. (Almanca öğrendim.)
+  Partizip II oluşumu: Düzenli fiiller: ge- + kök + -t (gemacht).
+  Hareket ve durum değişikliği bildiren fiiller (sein ile): Ich bin nach Berlin **gefahren**. (Berlin'e gittim.)
+
+- PRÄTERİTUM (Geçmiş Zaman - Di'li - Hikaye):
+  Daha çok yazı dilinde (roman, haber) kullanılır.
+  Örnek: Ich **lernte** Deutsch. (Almanca öğreniyordum / öğrendim.)
+  Not: "sein" ve "haben" fiilleri Präteritum'da çok kullanılır: ich war, ich hatte.
+
+- FUTUR I (Gelecek Zaman):
+  Yardımcı fiil "werden" + mastar (Infinitiv) ile yapılır.
+  Örnek: Ich **werde** Deutsch **lernen**. (Almanca öğreneceğim.)
+
+4. ALMANCA PRÄPOSITIONEN (EDATLAR)
+----------------------------------------
+Edatlar, hangi isim halini (Akkusativ veya Dativ) alacaklarına göre gruplanır.
+
+- SADECE AKKUSATİV ALANLAR (Hepsi "Neyi/Nereyi?"):
+  durch (vasıtasıyla), für (için), gegen (karşı), ohne (...sız), um (etrafında, -e doğru).
+  Örnek: Das Geschenk ist **für dich**. (Hediye senin için.)
+
+- SADECE DATİV ALANLAR (Hepsi "Nerede/Kime?"):
+  aus (-den), bei (-de/yakınında), mit (ile), nach (-den sonra/-e), seit (-den beri), von (-den), zu (-e).
+  Örnek: Ich bin **bei dem** Arzt. (Doktordayım.) -> **beim** Arzt.
+
+- HEM AKKUSATİV HEM DATİV ALANLAR (Yön/Hareket - Konum):
+  an, auf, hinter, in, neben, über, unter, vor, zwischen.
+  Kural: Eğer hareket varsa (Nereye? - Wohin?) -> Akkusativ.
+  Eğer konum varsa (Nerede? - Wo?) -> Dativ.
+  Örnek: Das Buch liegt **auf dem** Tisch. (Kitap masanın üzerinde - Dativ/Konum).
+  Örnek: Ich lege das Buch **auf den** Tisch. (Kitabı masanın üzerine koyuyorum - Akkusativ/Hareket).
+
+5. ALMANCA YARDIMCI FİİLLER (HİLFSVERBEN)
+----------------------------------------
+Üç ana yardımcı fiil çok önemlidir:
+
+- SEİN (Olmak): ich **bin**, du **bist**, er/sie/es **ist**, wir **sind**, ihr **seid**, sie **sind**.
+- HABEN (Sahip olmak): ich **habe**, du **hast**, er/sie/es **hat**, wir **haben**, ihr **habt**, sie **haben**.
+- WERDEN (Olmak / Gelecek zaman yardımcısı): ich **werde**, du **wirst**, er/sie/es **wird**, wir **werden**, ihr **werdet**, sie **werden**.
+
+6. ALMANCA CÜMLE YAPISI (SATZSTRUKTUR)
+----------------------------------------
+- TEMEL CÜMLE (Hauptsatz): Özne + Yüklem (Fiil) + Nesne.
+  Kural: Yüklem her zaman 2. pozisyondadır.
+  Örnek: Ich **lerne** Deutsch.
+
+- SORU CÜMLESİ (Frage): Fiil en başa gelir.
+  Örnek: **Lernst** du Deutsch?
+
+- YAN CÜMLE (Nebensatz): Yardımcı fiil (konjüksiyon) cümlenin başına gelir, esas fiil **en sona** gider.
+  Örnek: Ich lerne Deutsch, **weil** ich in Deutschland **wohne**. (Almanya'da yaşadığım için Almanca öğreniyorum.)
+
+- AYRILABİLEN FİİLLER (Trennbare Verben):
+  Fiilin ön eki (ör: auf-, an-, ein-) cümlenin sonuna gider.
+  Örnek: Ich **stehe** jeden Tag um 7 Uhr **auf**. (Her gün 7'de kalkarım - aufstehen).
+
+7. MODAL FİİLLER (KİP BELİRTECİ)
+----------------------------------------
+Yetki, istek, zorunluluk belirtirler. Ana fiili mastar (Infinitiv) olarak alırlar ve cümlenin sonuna koyarlar.
+
+- können (yapabilmek): Ich **kann** Deutsch **sprechen**. (Almanca konuşabilirim.)
+- müssen (zorunda olmak): Ich **muss** lernen. (Öğrenmek zorundayım.)
+- wollen (istemek): Ich **will** nach Deutschland **fliegen**. (Almanya'ya uçmak istiyorum.)
+- sollen (malı/-meli - tavsiye/emir): Du **sollst** mehr üben. (Daha çok pratik yapmalısın.)
+- dürfen (izinli olmak): Ich **darf** ausgehen. (Dışarı çıkabilirim - iznim var.)
+- mögen (sevmek / ihtimal): Ich **mag** Eis. (Dondurma severim.)
+
+8. ÖNEMLİ KÜÇÜK HATALAR (YAYGIN TUZAKLAR)
+----------------------------------------
+- "Das" ve "Dass" farkı: "Das" artikeldir veya ilgi zamiridir. "Dass" bağlaçtır (ki).
+  Doğru: Ich weiß, **dass** du kommst. (Geldiğini biliyorum.)
+  Doğru: Das Buch, **das** ich lese. (Okuduğum kitap.)
+
+- "Seit" ve "Vor" farkı: "Seit" başlangıçtan beri (zaman), "Vor" ... önce (geçmiş).
+  Doğru: Ich lerne **seit** 2 Jahren Deutsch. (2 yıldır Almanca öğreniyorum.)
+  Doğru: Ich war **vor** 2 Jahren in Berlin. (2 yıl önce Berlin'deydim.)
+
+================================================================================
+DOSYA SONU - RAG SİSTEMİ TARAFINDAN KULLANILACAKTIR.
+================================================================================
