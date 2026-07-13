@@ -1,5 +1,6 @@
 # router.py
-# Load the pruned 7B model with the LoRA adapter, integrate RAG, and route queries.
+# Purpose: Load the pruned + LoRA 7B model, integrate RAG, and route queries.
+# Routes between "chat" (casual conversation) and "grammar" (rule-based RAG).
 
 import os
 os.environ["HF_HUB_OFFLINE"] = "1"
@@ -14,12 +15,12 @@ from sentence_transformers import SentenceTransformer
 # ===============================================
 # CONFIGURATION
 # ===============================================
-BASE_MODEL_PATH = "models/qwen_pruned_7b"
-LORA_ADAPTER_PATH = "models/lora_on_pruned_7b"
+BASE_MODEL_PATH = "models/qwen_pruned_7b_4bit"
+LORA_ADAPTER_PATH = "models/lora_on_pruned_7b_4bit"
 CHROMA_DIR = "chroma_db"
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
-# Simple keyword‑based router
+# Simple keyword-based router for chat vs grammar
 CHAT_KEYWORDS = [
     "merhaba", "nasılsın", "iyiyim", "günaydın", "selam",
     "teşekkür", "ne haber", "iyi akşamlar", "hoşçakal"
@@ -31,7 +32,6 @@ CHAT_KEYWORDS = [
 print("⏳ Loading base pruned 7B model...")
 base_model = AutoModelForCausalLM.from_pretrained(
     BASE_MODEL_PATH,
-    torch_dtype=torch.bfloat16,
     device_map="cuda",
 )
 tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL_PATH)
@@ -53,7 +53,7 @@ collection = client.get_collection("german_grammar")
 print("✅ RAG ready.")
 
 # ===============================================
-# ROUTER
+# ROUTER & GENERATION
 # ===============================================
 def route_query(query: str) -> str:
     q = query.lower()
@@ -62,9 +62,6 @@ def route_query(query: str) -> str:
             return "chat"
     return "grammar"
 
-# ===============================================
-# GENERATION
-# ===============================================
 def generate_answer(query: str) -> str:
     route = route_query(query)
 
@@ -82,21 +79,21 @@ def generate_answer(query: str) -> str:
         response = tokenizer.decode(outputs[0], skip_special_tokens=True)
         return response.replace(prompt, "").strip()
 
-    else:  # grammar
-        # Retrieve relevant rules
+    else:  # grammar route
+        # Retrieve relevant rules from RAG
         q_emb = embedder.encode([query]).tolist()
         results = collection.query(query_embeddings=q_emb, n_results=2)
         context = "\n---\n".join(results['documents'][0])
 
         prompt = f"""
 [INST]
-Almanca Gramer Kuralları (Rules):
+German Grammar Rules:
 {context}
 
-Kullanıcının Sorusu (User Query): {query}
+User Query: {query}
 
-Lütfen yukarıdaki kurallara dayanarak kullanıcıya açıklayıcı ve doğru bir cevap ver. Eğer kurallar yetmiyorsa kendi bilgini kullan.
-Cevabı Türkçe veya Almanca karışık olarak açıkla.
+Based on the rules above, provide a clear and accurate explanation to the user.
+If the rules are insufficient, use your own knowledge. Answer in Turkish with German examples.
 [/INST]
 """
         inputs = tokenizer(prompt, return_tensors="pt").to(DEVICE)

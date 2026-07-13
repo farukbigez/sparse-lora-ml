@@ -1,13 +1,13 @@
 # 04_rag_setup.py
-# Build a ChromaDB vector database from the grammar text file.
-# Uses the cached SentenceTransformer model (no internet needed).
+# Purpose: Build a ChromaDB vector database from the German grammar text file.
+# Uses the multilingual-e5-small embedding model (cached offline).
 
 import os
 import shutil
 import chromadb
 from sentence_transformers import SentenceTransformer
 
-# Disable internet (embedding model is cached)
+# Disable internet (embedding model is already cached)
 os.environ["HF_HUB_OFFLINE"] = "1"
 
 # ===============================================
@@ -16,7 +16,7 @@ os.environ["HF_HUB_OFFLINE"] = "1"
 TEXT_FILE = "data/almanca_gramer.txt"
 CHROMA_DIR = "chroma_db"
 EMBEDDING_MODEL = "intfloat/multilingual-e5-small"
-CHUNK_SIZE = 600          # Larger chunks for better context
+CHUNK_SIZE = 600
 CHUNK_OVERLAP = 100
 
 if not os.path.exists(TEXT_FILE):
@@ -26,7 +26,7 @@ print("⏳ Loading and chunking grammar text...")
 with open(TEXT_FILE, "r", encoding="utf-8") as f:
     text = f.read()
 
-# Smart chunking by paragraphs first
+# Smart chunking: split by paragraphs first
 chunks = []
 current = []
 for line in text.split("\n"):
