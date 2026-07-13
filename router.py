@@ -1,35 +1,38 @@
 # router.py
-# Purpose: Load the pruned+LoRA model, integrate RAG, and route queries.
+# Load the pruned 7B model with the LoRA adapter, integrate RAG, and route queries.
+
+import os
+os.environ["HF_HUB_OFFLINE"] = "1"
+os.environ["TRANSFORMERS_OFFLINE"] = "1"
 
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from peft import PeftModel
 import chromadb
 from sentence_transformers import SentenceTransformer
-import os
 
 # ===============================================
-# 1. CONFIGURATION
+# CONFIGURATION
 # ===============================================
-BASE_MODEL_PATH = "models/qwen_pruned_30percent"
-LORA_ADAPTER_PATH = "models/lora_on_pruned"
+BASE_MODEL_PATH = "models/qwen_pruned_7b"
+LORA_ADAPTER_PATH = "models/lora_on_pruned_7b"
 CHROMA_DIR = "chroma_db"
-DEVICE = torch.device("mps")
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
-# Casual chat keywords
+# Simple keyword‑based router
 CHAT_KEYWORDS = [
     "merhaba", "nasılsın", "iyiyim", "günaydın", "selam",
     "teşekkür", "ne haber", "iyi akşamlar", "hoşçakal"
 ]
 
 # ===============================================
-# 2. LOAD MODEL (FIXED - no duplicate device_map)
+# LOAD MODEL (MERGED)
 # ===============================================
-print("⏳ Loading base pruned model...")
+print("⏳ Loading base pruned 7B model...")
 base_model = AutoModelForCausalLM.from_pretrained(
     BASE_MODEL_PATH,
-    dtype=torch.float16,
-    device_map="mps",          # SADECE BİR KERE!
+    torch_dtype=torch.bfloat16,
+    device_map="cuda",
 )
 tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL_PATH)
 tokenizer.pad_token = tokenizer.eos_token
@@ -38,33 +41,33 @@ print("⏳ Loading LoRA adapter and merging...")
 model = PeftModel.from_pretrained(base_model, LORA_ADAPTER_PATH)
 model = model.merge_and_unload()
 model.eval()
-print("✅ Model ready for inference.")
+print("✅ Model ready.")
 
 # ===============================================
-# 3. LOAD RAG (CHROMADB)
+# LOAD RAG
 # ===============================================
-print("⏳ Loading RAG vector database...")
-embedding_model = SentenceTransformer("intfloat/multilingual-e5-small")
-chroma_client = chromadb.PersistentClient(path=CHROMA_DIR)
-collection = chroma_client.get_collection("german_grammar")
+print("⏳ Loading RAG...")
+embedder = SentenceTransformer("intfloat/multilingual-e5-small")
+client = chromadb.PersistentClient(path=CHROMA_DIR)
+collection = client.get_collection("german_grammar")
 print("✅ RAG ready.")
 
 # ===============================================
-# 4. ROUTER FUNCTION
+# ROUTER
 # ===============================================
 def route_query(query: str) -> str:
-    query_lower = query.lower()
+    q = query.lower()
     for word in CHAT_KEYWORDS:
-        if word in query_lower:
+        if word in q:
             return "chat"
     return "grammar"
 
 # ===============================================
-# 5. GENERATION FUNCTION
+# GENERATION
 # ===============================================
 def generate_answer(query: str) -> str:
     route = route_query(query)
-    
+
     if route == "chat":
         prompt = f"<|im_start|>user\n{query}\n<|im_end|>\n<|im_start|>assistant\n"
         inputs = tokenizer(prompt, return_tensors="pt").to(DEVICE)
@@ -77,15 +80,14 @@ def generate_answer(query: str) -> str:
                 do_sample=True,
             )
         response = tokenizer.decode(outputs[0], skip_special_tokens=True)
-        response = response.replace(prompt, "").strip()
-        return response
+        return response.replace(prompt, "").strip()
 
-    else:  # grammar route
-        # Retrieve from RAG
-        query_embedding = embedding_model.encode([query]).tolist()
-        results = collection.query(query_embeddings=query_embedding, n_results=2)
+    else:  # grammar
+        # Retrieve relevant rules
+        q_emb = embedder.encode([query]).tolist()
+        results = collection.query(query_embeddings=q_emb, n_results=2)
         context = "\n---\n".join(results['documents'][0])
-        
+
         prompt = f"""
 [INST]
 Almanca Gramer Kuralları (Rules):
@@ -107,5 +109,4 @@ Cevabı Türkçe veya Almanca karışık olarak açıkla.
                 do_sample=True,
             )
         response = tokenizer.decode(outputs[0], skip_special_tokens=True)
-        response = response.replace(prompt, "").strip()
-        return response
+        return response.replace(prompt, "").strip()

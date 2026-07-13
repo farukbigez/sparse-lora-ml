@@ -1,88 +1,81 @@
-# src/04_rag_setup.py
-# Purpose: Build a vector database (ChromaDB) from a German grammar text file.
-# Uses the latest LangChain packages: langchain-text-splitters for chunking.
-# ChromaDB and sentence-transformers for embeddings and vector storage.
+# 04_rag_setup.py
+# Build a ChromaDB vector database from the grammar text file.
+# Uses the cached SentenceTransformer model (no internet needed).
 
 import os
 import shutil
-from langchain_community.document_loaders import TextLoader
-from langchain_text_splitters import RecursiveCharacterTextSplitters
+import chromadb
 from sentence_transformers import SentenceTransformer
-from chromadb import PersistentClient
-import numpy as np
+
+# Disable internet (embedding model is cached)
+os.environ["HF_HUB_OFFLINE"] = "1"
 
 # ===============================================
-# 1. CONFIGURATION
+# CONFIGURATION
 # ===============================================
-TEXT_FILE = "data/german_grammar.txt"
+TEXT_FILE = "data/almanca_gramer.txt"
 CHROMA_DIR = "chroma_db"
-EMBEDDING_MODEL = "intfloat/multilingual-e5-small"  # Supports both German & Turkish
+EMBEDDING_MODEL = "intfloat/multilingual-e5-small"
+CHUNK_SIZE = 600          # Larger chunks for better context
+CHUNK_OVERLAP = 100
 
-# ===============================================
-# 2. CHECK IF TEXT FILE EXISTS
-# ===============================================
 if not os.path.exists(TEXT_FILE):
-    raise FileNotFoundError(f"""
-    ❌ {TEXT_FILE} not found!
-    Please create this file and paste German grammar rules into it.
-    """)
+    raise FileNotFoundError(f"❌ {TEXT_FILE} not found! Please create it with grammar rules.")
 
-# ===============================================
-# 3. LOAD AND SPLIT TEXT (Using the new langchain-text-splitters)
-# ===============================================
-print(f"⏳ Loading text from {TEXT_FILE}...")
-loader = TextLoader(TEXT_FILE, encoding="utf-8")
-documents = loader.load()
+print("⏳ Loading and chunking grammar text...")
+with open(TEXT_FILE, "r", encoding="utf-8") as f:
+    text = f.read()
 
-print("⏳ Splitting text into chunks using RecursiveCharacterTextSplitter...")
-text_splitter = RecursiveCharacterTextSplitter(
-    chunk_size=400,
-    chunk_overlap=50,
-    length_function=len,
-    separators=["\n\n", "\n", ". ", " ", ""],
-)
-chunks = text_splitter.split_documents(documents)
-print(f"✅ Created {len(chunks)} chunks.")
+# Smart chunking by paragraphs first
+chunks = []
+current = []
+for line in text.split("\n"):
+    if line.strip():
+        current.append(line.strip())
+    else:
+        if current:
+            chunks.append(" ".join(current))
+            current = []
+if current:
+    chunks.append(" ".join(current))
 
-# ===============================================
-# 4. CREATE EMBEDDINGS AND STORE IN CHROMADB (Direct chromadb usage)
-# ===============================================
-print("⏳ Loading embedding model (multilingual-e5-small)...")
-embedding_model = SentenceTransformer(EMBEDDING_MODEL)
+# Further split long chunks
+final_chunks = []
+for chunk in chunks:
+    if len(chunk) > CHUNK_SIZE:
+        for i in range(0, len(chunk), CHUNK_SIZE - CHUNK_OVERLAP):
+            final_chunks.append(chunk[i:i + CHUNK_SIZE])
+    else:
+        final_chunks.append(chunk)
 
-# Delete old ChromaDB if exists
+final_chunks = [c.strip() for c in final_chunks if c.strip()]
+print(f"✅ Created {len(final_chunks)} chunks.")
+
+print("⏳ Loading embedding model (cached)...")
+embedder = SentenceTransformer(EMBEDDING_MODEL)
+
 if os.path.exists(CHROMA_DIR):
-    print(f"   Removing old {CHROMA_DIR}...")
     shutil.rmtree(CHROMA_DIR)
 
-print("⏳ Building vector database with ChromaDB...")
-client = PersistentClient(path=CHROMA_DIR)
+client = chromadb.PersistentClient(path=CHROMA_DIR)
 collection = client.get_or_create_collection(name="german_grammar")
 
-# Prepare data for ChromaDB
-ids = [f"chunk_{i}" for i in range(len(chunks))]
-texts = [chunk.page_content for chunk in chunks]
-metadatas = [{"source": TEXT_FILE} for _ in chunks]
+print("⏳ Generating embeddings...")
+embeddings = embedder.encode(final_chunks, show_progress_bar=True).tolist()
 
-# Generate embeddings
-embeddings = embedding_model.encode(texts, show_progress_bar=True).tolist()
-
-# Add to ChromaDB
 collection.add(
-    ids=ids,
-    documents=texts,
+    ids=[f"chunk_{i}" for i in range(len(final_chunks))],
+    documents=final_chunks,
     embeddings=embeddings,
-    metadatas=metadatas,
+    metadatas=[{"source": TEXT_FILE} for _ in final_chunks],
 )
 print(f"✅ Vector database saved to {CHROMA_DIR}")
 
-# ===============================================
-# 5. TEST RETRIEVAL
-# ===============================================
-print("\n🔍 Test Retrieval (Query: 'Almanca'da artikel...'):")
+# Quick test
 test_query = "Almanca'da artikel nasil secilir?"
-query_embedding = embedding_model.encode([test_query]).tolist()
-results = collection.query(query_embeddings=query_embedding, n_results=2)
+query_emb = embedder.encode([test_query]).tolist()
+results = collection.query(query_embeddings=query_emb, n_results=2)
 
-for i, (doc, dist) in enumerate(zip(results['documents'][0], results['distances'][0])):
-    print(f"   {i+1}. {doc[:100]}... (Distance: {dist:.4f})")
+print("\n🔍 Test Retrieval:")
+for i, doc in enumerate(results['documents'][0]):
+    print(f"   {i+1}. {doc[:150]}...")
