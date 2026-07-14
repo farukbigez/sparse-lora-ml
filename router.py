@@ -1,47 +1,38 @@
-# router.py
-# Purpose: Load the pruned + LoRA 7B model, integrate RAG, and route queries.
-# Routes between "chat" (casual conversation) and "grammar" (rule-based RAG).
-
+# router.py - 3B model (no pruning)
 import os
 os.environ["HF_HUB_OFFLINE"] = "1"
 os.environ["TRANSFORMERS_OFFLINE"] = "1"
 
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
-from peft import PeftModel
 import chromadb
 from sentence_transformers import SentenceTransformer
 
 # ===============================================
 # CONFIGURATION
 # ===============================================
-BASE_MODEL_PATH = "models/qwen_pruned_7b_4bit"
-LORA_ADAPTER_PATH = "models/lora_on_pruned_7b_4bit"
+BASE_MODEL_PATH = "Qwen/Qwen2.5-3B-Instruct"   # Use the model name, not a local path
 CHROMA_DIR = "chroma_db"
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
-# Simple keyword-based router for chat vs grammar
 CHAT_KEYWORDS = [
     "merhaba", "nasılsın", "iyiyim", "günaydın", "selam",
     "teşekkür", "ne haber", "iyi akşamlar", "hoşçakal"
 ]
 
 # ===============================================
-# LOAD MODEL (MERGED)
+# LOAD MODEL (3B, no pruning, float16)
 # ===============================================
-print("⏳ Loading base pruned 7B model...")
-base_model = AutoModelForCausalLM.from_pretrained(
+print("⏳ Loading 3B model (no pruning)...")
+model = AutoModelForCausalLM.from_pretrained(
     BASE_MODEL_PATH,
+    torch_dtype=torch.float16,
     device_map="cuda",
 )
 tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL_PATH)
 tokenizer.pad_token = tokenizer.eos_token
-
-print("⏳ Loading LoRA adapter and merging...")
-model = PeftModel.from_pretrained(base_model, LORA_ADAPTER_PATH)
-model = model.merge_and_unload()
 model.eval()
-print("✅ Model ready.")
+print("✅ 3B model ready.")
 
 # ===============================================
 # LOAD RAG
@@ -66,7 +57,7 @@ def generate_answer(query: str) -> str:
     route = route_query(query)
 
     if route == "chat":
-        prompt = f"<|im_start|>user\n{query}\n<|im_end|>\n<|im_start|>assistant\n"
+        prompt = f"User: {query}\nAssistant:"
         inputs = tokenizer(prompt, return_tensors="pt").to(DEVICE)
         with torch.no_grad():
             outputs = model.generate(
@@ -79,29 +70,23 @@ def generate_answer(query: str) -> str:
         response = tokenizer.decode(outputs[0], skip_special_tokens=True)
         return response.replace(prompt, "").strip()
 
-    else:  # grammar route
-        # Retrieve relevant rules from RAG
+    else:  # grammar
         q_emb = embedder.encode([query]).tolist()
         results = collection.query(query_embeddings=q_emb, n_results=2)
         context = "\n---\n".join(results['documents'][0])
 
-        prompt = f"""
-[INST]
-German Grammar Rules:
+        prompt = f"""German Grammar Rules:
 {context}
 
-User Query: {query}
+User Question: {query}
 
-Based on the rules above, provide a clear and accurate explanation to the user.
-If the rules are insufficient, use your own knowledge. Answer in Turkish with German examples.
-[/INST]
-"""
+Answer in Turkish with German examples:"""
         inputs = tokenizer(prompt, return_tensors="pt").to(DEVICE)
         with torch.no_grad():
             outputs = model.generate(
                 **inputs,
                 max_new_tokens=400,
-                temperature=0.5,
+                temperature=0.3,
                 top_p=0.9,
                 do_sample=True,
             )
